@@ -144,7 +144,8 @@ murkmod() {
         local VERSION=$(echo "$milestones" | tail -n 1 | tr -d '"')
         echo "Latest version is $VERSION"
     fi
-    local url="https://raw.githubusercontent.com/rainestorme/chrome100-json/main/boards/$board.json"
+    # Changed URL to use your GitHub fork
+    local url="https://raw.githubusercontent.com/Ogyeet10/chrome100-json/main/boards/$board.json"
     local json=$(curl -ks "$url")
     chrome_versions=$(echo "$json" | jq -r '.pageProps.images[].chrome')
     echo "Found $(echo "$chrome_versions" | wc -l) versions of chromeOS for your board on chrome100."
@@ -160,8 +161,25 @@ murkmod() {
         if [[ $cros_version == $VERSION* ]]; then
             echo "Found a $VERSION match on platform $platform from $last_modified."
             MATCH_FOUND=1
-            #https://dl.google.com/dl/edgedl/chromeos/recovery/chromeos_15117.112.0_hatch_recovery_stable-channel_mp-v6.bin.zip
+            
+            # Added debug output for variable values
+            echo "DEBUG - Variables before URL construction:"
+            echo "platform: $platform"
+            echo "board: $board"
+            echo "channel: $channel"
+            echo "mp_token: $mp_token"
+            echo "mp_key: $mp_key"
+            
+            # Check for empty mp_key and provide default if needed
+            if [ -z "$mp_key" ]; then
+                echo "WARNING: mp_key is empty, setting default value of 6"
+                mp_key="6"
+            fi
+            
             FINAL_URL="https://dl.google.com/dl/edgedl/chromeos/recovery/chromeos_${platform}_${board}_recovery_${channel}_${mp_token}-v${mp_key}.bin.zip"
+            
+            # Added debug output for final URL
+            echo "DEBUG - Final URL: $FINAL_URL"
             break
         fi
     done
@@ -182,6 +200,8 @@ murkmod() {
                 MATCH_FOUND=1
                 FINAL_URL=$(jq -r ".builds.$board[].$hwid.pushRecoveries[\"$milestone\"]" <<<"$builds")
                 echo "Found a match!"
+                # Added debug output for final URL from Chromium Dash
+                echo "DEBUG - Final URL from Chromium Dash: $FINAL_URL"
                 break
             fi
         done
@@ -199,6 +219,7 @@ murkmod() {
         curl --progress-bar -Lko /usr/local/tmp/unzip https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox
         chmod 777 /usr/local/tmp/unzip
         echo "Downloading recovery image from '$FINAL_URL'..."
+        # Added quotes around URL to prevent shell expansion issues
         curl --progress-bar -k "$FINAL_URL" -o recovery.zip
         echo "Unzipping image... (this may take a while)"
         /usr/local/tmp/unzip -o recovery.zip
